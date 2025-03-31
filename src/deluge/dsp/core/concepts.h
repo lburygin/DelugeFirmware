@@ -44,6 +44,9 @@ concept sample_processor = requires(T t, typename T::value_type sample) {
 };
 
 template <typename T>
+concept processor = block_processor<T> && sample_processor<T>;
+
+template <typename T>
 concept sample_converter = requires(T t, typename T::value_type sample) {
 	{ t.render(sample) };
 };

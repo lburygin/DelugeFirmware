@@ -15,10 +15,8 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "processor.h"
 #include <algorithm>
 #include <argon.hpp>
-#include <span>
 
 namespace deluge::dsp {
 /// @brief A base class for objects that generate a stream of samples.

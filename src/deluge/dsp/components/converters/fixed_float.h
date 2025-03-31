@@ -16,19 +16,14 @@
  */
 
 #pragma once
-#include "dsp/core/processor.h"
-#include "dsp/core/types.h"
-#include <span>
+#include "dsp/core/converter.h"
 
-namespace deluge::dsp::blocks {
-template <typename T>
-struct MidSide : BlockProcessor<T> {
-	/// @brief Convert stereo to mid-side
-	void renderBlock(StereoSignal<T> input, StereoBuffer<T> output) {
-		for (size_t i = 0; i < input.size(); ++i) {
-			output.l = input.l[i] + input.r[i]; // Mid
-			output.r = input.l[i] - input.r[i]; // Side
-		}
-	}
+namespace deluge::dsp::converters {
+struct FixedFloatConverter : Converter<fixed_point::Sample, floating_point::Sample>,
+                             Converter<Argon<q31_t>, Argon<float>> {
+	floating_point::Sample render(fixed_point::Sample sample) final { return sample.to_float(); }
+	fixed_point::Sample render(floating_point::Sample sample) final { return sample; }
+	Argon<float> render(Argon<q31_t> sample) final { return sample.ConvertTo<floating_point::Sample, 31>(); }
+	Argon<q31_t> render(Argon<float> sample) final { return sample.ConvertTo<q31_t, 31>(); }
 };
-} // namespace deluge::dsp::blocks
+} // namespace deluge::dsp::converters

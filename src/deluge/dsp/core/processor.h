@@ -32,22 +32,29 @@ struct BlockProcessor {
 	/// @brief Process a block of samples.
 	/// @param input The input buffer of samples to process.
 	/// @param output The output buffer to fill with processed samples.
-	virtual void renderBlock(Buffer<T> input, Buffer<T> output) = 0;
+	virtual void renderBlock(Signal<T> input, Buffer<T> output) = 0;
 };
 
-/// @brief A base class for processors that are able to process a single sample at a time.
+/// @brief A base class for processors that process a single sample at a time.
+/// @note Only inherit from this class if you plan on also inheriting from BlockProcessor and providing a custom
+/// implementation of renderBlock().
 /// @tparam T The type of the samples to process.
 template <typename T>
-struct Processor : BlockProcessor<T> {
+struct SampleProcessor {
 	/// @brief Process a single sample of type T.
 	/// @param sample The input sample to process.
 	/// @return The processed sample.
 	virtual T render(T sample) = 0;
+};
 
+/// @brief A base class for processors.
+/// @tparam T The type of the samples to process.
+template <typename T>
+struct Processor : SampleProcessor<T>, BlockProcessor<T> {
 	/// @brief Process a block of samples by calling render() for each sample.
 	/// @param input The input buffer of samples to process.
 	/// @param output The output buffer to fill with processed samples.
-	void renderBlock(Buffer<T> input, Buffer<T> output) final {
+	void renderBlock(Signal<T> input, Buffer<T> output) final {
 		for (size_t i = 0; i < input.size(); ++i) {
 			output[i] = render(input[i]); // Call the process function for each sample
 		}
@@ -57,28 +64,45 @@ struct Processor : BlockProcessor<T> {
 /// @brief A base class for processors that are able to process a vector of samples using SIMD operations.
 /// @tparam T The type of the samples to process.
 template <typename T>
-struct SIMDProcessor : BlockProcessor<T> {
-	/// @brief Process a block of samples using SIMD operations.
-	/// @param samples The input buffer of samples to process.
-	/// @return The processed buffer of samples.
-	virtual Argon<T> render(Argon<T> sample) = 0;
-
+struct SIMDProcessor : SampleProcessor<Argon<T>>, BlockProcessor<T> {
 	/// @brief Process a block of samples by calling render() for each sample.
 	/// @param input The input buffer of samples to process.
 	/// @param output The output buffer to fill with processed samples.
-	void renderBlock(Buffer<T> input, Buffer<T> output) final {
+	void renderBlock(Signal<T> input, Buffer<T> output) final {
 		auto input_view = input | std::views::chunk(Argon<T>::lanes);
 		auto output_view = output | std::views::chunk(Argon<T>::lanes);
 
 		auto input_it = input_view.begin();
 		auto output_it = output_view.begin();
-		for (; input_it != input_view.end() && output_it != output_view.end(); ++input_it, ++output_it) {
-			auto [input_chunk_start, _input_chunk_end] = *input_it;
-			auto [output_chunk_start, _output_chunk_end] = *output_it;
+		while (input_it != input_view.end() && output_it != output_view.end()) {
+			auto [input_chunk_start, _input_chunk_end] = *input_it++;
+			auto [output_chunk_start, _output_chunk_end] = *output_it++;
 
-			Argon<T> input = Argon<T>::Load(*input_chunk_start);
+			Argon<T> input = Argon<T>::Load(&*input_chunk_start);
 			Argon<T> output = render(input);
-			output.StoreTo(*output_chunk_start);
+			output.StoreTo(&*output_chunk_start);
+		}
+	};
+};
+
+template <typename T>
+struct SIMDProcessor<StereoSample<T>> : SampleProcessor<StereoSample<Argon<T>>>, BlockProcessor<StereoSample<T>> {
+	/// @brief Process a block of samples by calling render() for each sample.
+	/// @param input The input buffer of samples to process.
+	/// @param output The output buffer to fill with processed samples.
+	void renderBlock(StereoSignal<T> input, StereoBuffer<T> output) final {
+		auto input_view = input | std::views::chunk(Argon<T>::lanes);
+		auto output_view = output | std::views::chunk(Argon<T>::lanes);
+
+		auto input_it = input_view.begin();
+		auto output_it = output_view.begin();
+		while (input_it != input_view.end() && output_it != output_view.end()) {
+			auto [input_chunk_start, _input_chunk_end] = *input_it++;
+			auto [output_chunk_start, _output_chunk_end] = *output_it++;
+
+			auto [left, right] = Argon<T>::LoadInterleaved<2>(&input_chunk_start->l);
+			auto [left_out, right_out] = render({left, right});
+			argon::store_interleaved<2>(&*output_chunk_start, left_out, right_out);
 		}
 	};
 };

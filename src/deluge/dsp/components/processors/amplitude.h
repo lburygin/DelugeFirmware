@@ -21,7 +21,7 @@
 #include "dsp/core/types.h"
 #include "util/fixedpoint.h"
 
-namespace deluge::dsp::processor {
+namespace deluge::dsp::processors {
 /// @brief A processor that applies a stepped gain to an input sample.
 /// @deprecated
 class AmplitudeStepProcessor final : public SIMDProcessor<fixed_point::Sample> {
@@ -49,4 +49,4 @@ public:
 		return output;
 	}
 };
-} // namespace deluge::dsp::processor
+} // namespace deluge::dsp::processors

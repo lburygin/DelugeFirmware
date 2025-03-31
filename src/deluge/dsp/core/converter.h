@@ -17,9 +17,7 @@
 
 #pragma once
 #include "dsp/core/types.h"
-#include <algorithm>
 #include <argon.hpp>
-#include <span>
 
 namespace deluge::dsp {
 /// @brief A base class for adapters that process a stream of samples.
@@ -35,7 +33,7 @@ struct BlockConverter {
 	/// @brief Convert a block of type T to type U.
 	/// @param input The input buffer of type T to convert.
 	/// @param output The output buffer of type U to fill with converted samples.
-	virtual void renderBlock(Buffer<T> input, Buffer<U> output) = 0;
+	virtual void renderBlock(Signal<T> input, Buffer<U> output) = 0;
 };
 
 /// @brief A base class for adapters that process a single sample at a time.
@@ -51,7 +49,7 @@ struct Converter : BlockConverter<T, U>, BlockConverter<U, T> {
 	/// @brief Convert a block of type T to type U by calling render() for each sample.
 	/// @param input The input buffer of type T to convert.
 	/// @param output The output buffer of type U to fill with converted samples.
-	void renderBlock(Buffer<T> input, Buffer<U> output) final {
+	void renderBlock(Signal<T> input, Buffer<U> output) final {
 		for (size_t i = 0; i < input.size(); ++i) {
 			output[i] = render(input[i]); // Call the process function for each sample
 		}
@@ -65,7 +63,7 @@ struct Converter : BlockConverter<T, U>, BlockConverter<U, T> {
 	/// @brief Convert a block of type U to type T by calling render() for each sample.
 	/// @param input The input buffer of type U to convert.
 	/// @param output The output buffer of type T to fill with converted samples.
-	void renderBlock(Buffer<U> input, Buffer<T> output) final {
+	void renderBlock(Signal<U> input, Buffer<T> output) final {
 		for (size_t i = 0; i < input.size(); ++i) {
 			output[i] = render(input[i]); // Call the process function for each sample
 		}
@@ -85,14 +83,19 @@ struct Converter<Argon<T>, Argon<U>> : BlockConverter<T, U>, BlockConverter<U, T
 	/// @brief Convert a block of type T to type U using SIMD operations.
 	/// @param input The input buffer of type T to convert.
 	/// @param output The output buffer of type U to fill with converted samples.
-	void renderBlock(Buffer<T> input, Buffer<U> output) final {
-		auto input_view = argon::vectorize(input);
-		auto output_view = argon::vectorize(output);
+	void renderBlock(Signal<T> input, Buffer<U> output) final {
+		auto input_view = input | std::views::chunk(Argon<T>::lanes);
+		auto output_view = output | std::views::chunk(Argon<U>::lanes);
 
 		auto input_it = input_view.begin();
 		auto output_it = output_view.begin();
-		for (; input_it != input_view.end(); ++input_it, ++output_it) {
-			*output_it = render(*input_it); // Call the process function for each vector
+		for (; input_it != input_view.end() && output_it != output_view.end(); ++input_it, ++output_it) {
+			auto [input_chunk_start, _input_chunk_end] = *input_it;
+			auto [output_chunk_start, _output_chunk_end] = *output_it;
+
+			Argon<T> input = Argon<T>::Load(&*input_chunk_start);
+			Argon<U> output = render(input);
+			output.StoreTo(&*output_chunk_start);
 		}
 	}
 
@@ -104,25 +107,20 @@ struct Converter<Argon<T>, Argon<U>> : BlockConverter<T, U>, BlockConverter<U, T
 	/// @brief Convert a block of type U to type T using SIMD operations.
 	/// @param input The input buffer of type U to convert.
 	/// @param output The output buffer of type T to fill with converted samples.
-	void renderBlock(Buffer<U> input, Buffer<T> output) final {
-		auto input_view = argon::vectorize(input);
-		auto output_view = argon::vectorize(output);
+	void renderBlock(Signal<U> input, Buffer<T> output) final {
+		auto input_view = input | std::views::chunk(Argon<U>::lanes);
+		auto output_view = output | std::views::chunk(Argon<T>::lanes);
 
 		auto input_it = input_view.begin();
 		auto output_it = output_view.begin();
-		for (; input_it != input_view.end(); ++input_it, ++output_it) {
-			*output_it = render(*input_it); // Call the process function for each vector
+		for (; input_it != input_view.end() && output_it != output_view.end(); ++input_it, ++output_it) {
+			auto [input_chunk_start, _input_chunk_end] = *input_it;
+			auto [output_chunk_start, _output_chunk_end] = *output_it;
+
+			Argon<U> input = Argon<U>::Load(&*input_chunk_start);
+			Argon<T> output = render(input);
+			output.StoreTo(&*output_chunk_start);
 		}
 	}
-};
-
-struct FixedFloatConverter : Converter<fixed_point::Sample, floating_point::Sample> {
-	floating_point::Sample render(fixed_point::Sample sample) final { return sample.to_float(); }
-	fixed_point::Sample render(floating_point::Sample sample) final { return sample; }
-};
-
-struct SIMDFixedFloatConverter : Converter<Argon<q31_t>, Argon<float>> {
-	Argon<float> render(Argon<q31_t> sample) final { return sample.ConvertTo<floating_point::Sample, 31>(); }
-	Argon<q31_t> render(Argon<float> sample) final { return sample.ConvertTo<q31_t, 31>(); }
 };
 } // namespace deluge::dsp
