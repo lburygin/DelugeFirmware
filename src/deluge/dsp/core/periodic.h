@@ -1,0 +1,89 @@
+/**
+ * Copyright (c) 2025 Katherine Whitlock
+ *
+ * This file is part of The Synthstrom Audible Deluge Firmware.
+ *
+ * The Synthstrom Audible Deluge Firmware is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+#include "definitions_cxx.hpp"
+#include "dsp/core/generator.h"
+#include "types.h"
+
+namespace deluge::dsp {
+namespace impl {
+/// @brief An inner state class for periodic generators
+template <typename PhaseType, typename IncrementType = PhaseType>
+class PeriodicState {
+	PhaseType phase_ = 0;               ///< Current phase of the oscillator
+	IncrementType phase_increment_ = 0; ///< Increment value for the phase, typically (1 / sample_rate) * frequency
+
+public:
+	constexpr PeriodicState(PhaseType phase, IncrementType phase_increment)
+	    : phase_{phase}, phase_increment_{phase_increment} {}
+	constexpr PeriodicState(IncrementType phase_increment) : phase_increment_{phase_increment} {}
+	constexpr PeriodicState(Frequency frequency) : phase_increment_{IncrementType((1.f / kSampleRate) * frequency)} {}
+	constexpr PeriodicState() = default;
+	constexpr virtual ~PeriodicState() = default;
+
+	[[nodiscard]] constexpr PhaseType getPhase() const { return phase_; }
+	[[nodiscard]] constexpr IncrementType getPhaseIncrement() const { return phase_increment_; }
+
+	/// @brief Set the phase and step values
+	constexpr void setPhase(PhaseType new_phase) { phase_ = new_phase; }
+	constexpr void setPhaseIncrement(IncrementType new_phase_increment) { phase_increment_ = new_phase_increment; }
+};
+} // namespace impl
+
+template <typename T>
+struct Periodic : impl::PeriodicState<T>, Generator<T> {
+	using impl::PeriodicState<T>::PeriodicState;
+
+	[[nodiscard]] T render() final {
+		auto new_phase = this->phase_ + this->phase_increment_;
+		new_phase = (new_phase >= T(1)) ? new_phase - T(1) : new_phase;
+		return new_phase;
+	}
+	void advance() { this->setPhase(Periodic::render()); }
+};
+
+template <>
+struct Periodic<uint32_t> : impl::PeriodicState<uint32_t>, Generator<uint32_t> {
+	using impl::PeriodicState<uint32_t>::PeriodicState;
+
+	constexpr Periodic(Frequency frequency)
+	    : impl::PeriodicState<uint32_t>{std::bit_cast<uint32_t>(FixedPoint<31>((1.f / kSampleRate) * frequency).raw())
+	                                    << 1} {}
+	[[nodiscard]] uint32_t render() final { return getPhase() + getPhaseIncrement(); }
+	void advance() { setPhase(Periodic::render()); }
+};
+
+template <typename T>
+struct Periodic<Argon<T>> : impl::PeriodicState<Argon<T>, T>, SIMDGenerator<T> {
+	using impl::PeriodicState<Argon<T>, T>::PeriodicState;
+
+	[[nodiscard]] Argon<T> render() final {
+		auto new_phase = this->getPhase() + (this->getPhaseIncrement() * Argon<T>::lanes);
+		return argon::ternary(new_phase >= T(1), new_phase - T(1), new_phase);
+	}
+	void advance() { setPhase(Periodic::render()); }
+};
+
+template <>
+struct Periodic<Argon<uint32_t>> : impl::PeriodicState<Argon<uint32_t>, uint32_t>, SIMDGenerator<uint32_t> {
+	using impl::PeriodicState<Argon<uint32_t>, uint32_t>::PeriodicState;
+
+	[[nodiscard]] Argon<uint32_t> render() final { return getPhase() + (getPhaseIncrement() * Argon<uint32_t>::lanes); }
+	void advance() { setPhase(Periodic::render()); }
+};
+} // namespace deluge::dsp
