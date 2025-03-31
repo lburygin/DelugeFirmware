@@ -21,7 +21,7 @@
 #include <span>
 
 namespace deluge::dsp {
-/// @brief A base class for generators that process a stream of samples.
+/// @brief A base class for objects that generate a stream of samples.
 /// @tparam T The type of the samples to generate.
 template <typename T>
 struct BlockGenerator {
@@ -35,7 +35,7 @@ struct BlockGenerator {
 	virtual void renderBlock(Buffer<T> buffer) = 0;
 };
 
-/// @brief A base class for generators that process a single sample at a time.
+/// @brief A base class for objects that generate a single sample at a time.
 /// @tparam T The type of the samples to generate.
 template <typename T>
 struct Generator : BlockGenerator<T> {
@@ -55,7 +55,7 @@ struct Generator : BlockGenerator<T> {
 	}
 };
 
-/// @brief A base class for generators that generate a vector of samples using SIMD operations.
+/// @brief A base class for objects that generate a vector of samples using SIMD operations.
 /// @tparam T The type of the samples to generate.
 template <typename T>
 struct SIMDGenerator : BlockGenerator<T> {

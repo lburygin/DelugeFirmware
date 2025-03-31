@@ -20,6 +20,9 @@
 #include "dsp/core/types.h"
 
 namespace deluge::dsp {
+
+/// @brief A class that chains together multiple block processors for use high-level (multiple effects) audio pipeline.
+/// @tparam T The type of the samples.
 template <typename T>
 class Chain : public BlockProcessor<T> {
 	std::vector<BlockProcessor<T>*> processors_;
@@ -29,11 +32,15 @@ public:
 
 	Chain(std::vector<BlockProcessor<T>*> processors) : processors_{processors} {}
 
-	[[gnu::always_inline]] void renderBlock(Buffer<T> input, Buffer<T> output) final {
+	/// @brief Renders a block of audio samples by processing the input through each processor in the chain.
+	[[gnu::always_inline]] void renderBlock(Signal<T> input, Buffer<T> output) final {
 		for (auto& processor : processors_) {
 			processor->renderBlock(input, output); // Call the process function for each sample
 		}
 	}
+
+	/// @brief Get the processors in the chain.
+	std::vector<BlockProcessor<T>*>& processors() { return processors_; }
 };
 
 } // namespace deluge::dsp

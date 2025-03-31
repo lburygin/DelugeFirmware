@@ -56,21 +56,19 @@ struct GainProcessor final : Gain<T>, SIMDProcessor<T>, Processor<T> {
 
 template <>
 struct GainProcessor<fixed_point::Sample> final : Gain<FixedPoint<31>>,
-                                                  SIMDProcessor<fixed_point::Sample>,
+                                                  SIMDProcessor<q31_t>,
                                                   Processor<fixed_point::Sample> {
 	using Gain<FixedPoint<31>>::Gain;
 
 	/// @brief Process a single sample and apply the gain.
 	/// @param sample The input sample to process.
 	/// @return The processed sample with gain applied.
-	[[gnu::always_inline]] fixed_point::Sample render(fixed_point::Sample sample) final {
-		return q31_mult(sample, gain.raw());
-	}
+	[[gnu::always_inline]] fixed_point::Sample render(fixed_point::Sample sample) final { return sample * gain.raw(); }
 
 	/// @brief Process a vector of samples and apply the gain.
 	/// @param input The input vector of samples to process.
 	/// @return The processed vector of samples with gain applied.
-	[[gnu::always_inline]] Argon<int32_t> render(Argon<int32_t> input) final {
+	[[gnu::always_inline]] Argon<q31_t> render(Argon<q31_t> input) final {
 		return input.MultiplyFixedPoint(gain.raw());
 	}
 };
@@ -101,9 +99,7 @@ struct GainMixer final : Gain<T>, SIMDMixer<T>, Mixer<T> {
 /// @details The GainMixer applies a gain to the first input sample and mixes it with the second input sample.
 /// @note This is only really useful on platforms that have a Fused Multiply-Add (FMA) instruction.
 template <>
-struct GainMixer<fixed_point::Sample> final : Gain<FixedPoint<31>>,
-                                              SIMDMixer<fixed_point::Sample>,
-                                              Mixer<fixed_point::Sample> {
+struct GainMixer<fixed_point::Sample> final : Gain<FixedPoint<31>>, SIMDMixer<q31_t>, Mixer<fixed_point::Sample> {
 	using Gain<FixedPoint<31>>::Gain;
 
 	/// @brief Mix two input samples into an output, treating the second input as a unity gain.
@@ -111,7 +107,7 @@ struct GainMixer<fixed_point::Sample> final : Gain<FixedPoint<31>>,
 	/// @param input_b The second input sample to mix (unity gain).
 	/// @return The mixed sample.
 	[[gnu::always_inline]] fixed_point::Sample render(fixed_point::Sample input_a, fixed_point::Sample input_b) final {
-		return FixedPoint<31>::from_raw(input_b).MultiplyAdd(FixedPoint<31>::from_raw(input_a), gain).raw();
+		return input_b.MultiplyAdd(input_a, gain);
 	}
 
 	/// @brief Mix a vector of samples from two inputs into an output, treating the second input as a unity gain.

@@ -14,8 +14,7 @@
 // If not, see <https://www.gnu.org/licenses/>.
 
 #pragma once
-#include <dsp/core/processor.h>
-#include <queue>
+#include "dsp/core/parallel.h"
 
 /// A DSP pipeline is a collection of processors that are executed concurrently (whether threaded or SIMD). This is done
 /// by introducing a single sample delay. For N processors there are N stored samples. The first processor is fed the
@@ -23,10 +22,10 @@
 
 namespace deluge::dsp {
 
-template <typename T>
+template <typename ParallelProcessor, size_t N>
 class ParallelPipeline {
-	std::queue<T> samples_;
-	std::vector<SIMDProcessor<T>> processors_;
+	std::array<typename ParallelProcessor::value_type, N> samples_;
+	std::array<ParallelProcessor*, N> processors_;
 
 public:
 };

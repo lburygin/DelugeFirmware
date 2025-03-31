@@ -26,7 +26,7 @@ template <typename T>
 using Sample = T;
 
 template <typename T>
-using Buffer = Buffer<T>;
+using Buffer = std::span<T>;
 
 template <typename T>
 using Signal = std::span<const T>;
@@ -37,13 +37,19 @@ struct StereoSample {
 	Sample<T> r;
 
 	[[gnu::always_inline]] static constexpr StereoSample fromMono(Sample<T> sample) { return {sample, sample}; }
+
+	bool operator==(const StereoSample& other) const { return l == other.l && r == other.r; }
+	bool operator!=(const StereoSample& other) const { return !(*this == other); }
+	StereoSample operator+(const StereoSample& other) const { return {l + other.l, r + other.r}; }
+	StereoSample operator-(const StereoSample& other) const { return {l - other.l, r - other.r}; }
+	StereoSample operator*(T scalar) const { return {l * scalar, r * scalar}; }
 };
 
 template <typename T>
-using StereoBuffer = std::span<StereoSample<T>>;
+using StereoBuffer = Buffer<StereoSample<T>>;
 
 template <typename T>
-using StereoSignal = std::span<const StereoSample<T>>;
+using StereoSignal = Signal<StereoSample<T>>;
 
 namespace fixed_point {
 using Sample = Sample<FixedPoint<31>>;

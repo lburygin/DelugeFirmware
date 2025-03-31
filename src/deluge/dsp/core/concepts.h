@@ -16,12 +16,12 @@
  */
 
 #pragma once
-#include <span>
+#include "dsp/core/types.h"
 
 namespace deluge::dsp {
 /// @brief A concept for generators that render a block of samples.
 template <typename T>
-concept block_generator = requires(T t, std::span<typename T::value_type> buffer) {
+concept block_generator = requires(T t, Buffer<typename T::value_type> buffer) {
 	{ t.renderBlock(buffer) };
 };
 
@@ -33,10 +33,9 @@ concept sample_generator = requires(T t) {
 
 /// @brief A concept for processors that render a block of samples.
 template <typename T>
-concept block_processor =
-    requires(T t, std::span<typename T::value_type> input, std::span<typename T::value_type> output) {
-	    { t.renderBlock(input, output) };
-    };
+concept block_processor = requires(T t, Signal<typename T::value_type> input, Buffer<typename T::value_type> output) {
+	{ t.renderBlock(input, output) };
+};
 
 /// @brief A concept for processors that render a single sample at a time.
 template <typename T>
@@ -49,17 +48,10 @@ concept sample_converter = requires(T t, typename T::value_type sample) {
 	{ t.render(sample) };
 };
 
-/// @brief A concept for processors that render a block of samples using SIMD operations.
-template <typename T>
-concept block_adapter =
-    requires(T t, std::span<typename T::input_type> input, std::span<typename T::output_type> output) {
-	    { t.renderBlock(input, output) };
-    };
-
 /// @brief A concept for mixers that render a block of samples.
 template <typename T>
-concept block_mixer = requires(T t, std::span<typename T::value_type> input_a,
-                               std::span<typename T::value_type> input_b, std::span<typename T::value_type> output) {
+concept block_mixer = requires(T t, Signal<typename T::value_type> input_a, Signal<typename T::value_type> input_b,
+                               Buffer<typename T::value_type> output) {
 	{ t.renderBlock(input_a, input_b, output) };
 };
 

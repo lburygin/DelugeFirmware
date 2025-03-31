@@ -15,11 +15,8 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "concepts.h"
-#include <algorithm>
+#include "types.h"
 #include <argon.hpp>
-#include <span>
-#include <tuple>
 
 namespace deluge::dsp {
 
@@ -84,4 +81,6 @@ struct SIMDProcessor : BlockProcessor<T> {
 			output.StoreTo(*output_chunk_start);
 		}
 	};
+};
+
 } // namespace deluge::dsp

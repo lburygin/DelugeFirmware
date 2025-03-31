@@ -28,7 +28,10 @@
 namespace deluge::dsp {
 /// @brief A class that adapts a processor to work in a pipeline of a different type.
 /// @tparam T The type of the input samples.
-/// @tparam ProcessorType The type of the processor to be wrapped by the adapter.
+/// @tparam ProcessorType The type of the processor to be wrapped by the adapter, either a pointer or a non-pointer
+/// type.
+/// @details Adapter acts as a converter between an outer type `T` and an inner type which is the value type of the
+/// processor.
 template <typename T, typename ProcessorType>
 class Adapter : public Converter<T, typename std::remove_pointer_t<ProcessorType>::value_type>, public Processor<T> {
 public:
