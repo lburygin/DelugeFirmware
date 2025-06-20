@@ -208,6 +208,7 @@ public:
 	/// @param startY Minimum Y coordinate, inclusive
 	/// @param endY Maximum Y coordinate, inclusive
 	void invertArea(int32_t xMin, int32_t width, int32_t startY, int32_t endY);
+	void invertAreaRounded(int32_t xMin, int32_t width, int32_t startY, int32_t endY);
 
 	/// Invert just the left edge of the canvas.
 	///

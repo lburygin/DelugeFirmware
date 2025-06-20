@@ -123,12 +123,12 @@ void HorizontalMenu::drawPixelsForOled() {
 		if (n == posOnPage && (pageItems.size() > 1 || pageItems[0]->getColumnSpan() < 4)) {
 			if (menuStyle == Numeric || !labelPos.has_value() || item->isSubmenu()) {
 				// highlight the whole slot
-				image.invertArea(currentX, boxWidth, baseY, baseY + boxHeight + 1);
+				image.invertAreaRounded(currentX, boxWidth, baseY, baseY + boxHeight + 1);
 			}
 			else {
 				// highlight only label
-				image.invertArea(labelPos->startX - 2, labelPos->width + 3, labelPos->startY,
-				                 labelPos->startY + labelPos->height - 1);
+				image.invertAreaRounded(labelPos->startX - 3, labelPos->width + 4, labelPos->startY,
+				                        labelPos->startY + labelPos->height - 1);
 			}
 		}
 
