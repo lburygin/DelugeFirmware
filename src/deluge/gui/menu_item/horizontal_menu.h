@@ -51,6 +51,7 @@ protected:
 	ActionResult switchVisiblePage(int32_t direction);
 	void updateSelectedMenuItemLED(int32_t itemNumber);
 	Paging splitMenuItemsByPages() const;
+	void drawPageCounters();
 	static void displayPopup(MenuItem* menuItem);
 	static ColumnLabelPosition renderColumnLabel(MenuItem* menuItem, int32_t labelY, int32_t slotStartX,
 	                                             int32_t slotWidth);

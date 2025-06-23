@@ -212,6 +212,8 @@ public:
 	/// @param text Title text
 	void drawScreenTitle(std::string_view text, bool drawSeparator = true);
 
+	void drawCheckerboardPattern(int32_t startX, int32_t endX, int32_t startY, int32_t height, int32_t squareSize = 1);
+
 	/// Invert an area of the canvas.
 	///
 	/// @param xMin Minimum X coordinate, inclusive

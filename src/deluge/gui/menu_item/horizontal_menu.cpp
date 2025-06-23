@@ -45,6 +45,7 @@ void HorizontalMenu::renderOLED() {
 	// example: mod-fx menu where the second page title is depending on the selected mod-fx type
 	drawPixelsForOled();
 	hid::display::OLED::main.drawScreenTitle(getTitle(), false);
+	drawPageCounters();
 	hid::display::OLED::markChanged();
 }
 
@@ -109,7 +110,7 @@ void HorizontalMenu::drawPixelsForOled() {
 		if (n == posOnPage && (pageItems.size() > 1 || pageItems[0]->getColumnSpan() < 4)) {
 			if (FlashStorage::accessibilityMenuHighlighting) {
 				// Highlight just by drawing a line below
-				image.invertArea(currentX, boxWidth - 1, baseY + boxHeight, OLED_MAIN_VISIBLE_HEIGHT + 1);
+				image.invertArea(currentX + 2, boxWidth - 4, baseY - 2, baseY - 2);
 			}
 			else if (!labelPos.has_value() || item->isSubmenu()) {
 				// Highlight the whole slot if it has no label or is a submenu
@@ -124,21 +125,33 @@ void HorizontalMenu::drawPixelsForOled() {
 		currentX += boxWidth;
 		it = std::next(it);
 	}
+}
 
-	// Render the page counters
-	if (paging.pages.size() > 1) {
-		constexpr int32_t pageY = 1 + OLED_MAIN_TOPMOST_PIXEL;
-		int32_t endX = OLED_MAIN_WIDTH_PIXELS;
+void HorizontalMenu::drawPageCounters() {
+	if (paging.pages.size() <= 1) {
+		return;
+	}
 
-		for (int32_t p = paging.pages.size(); p > 0; p--) {
-			DEF_STACK_STRING_BUF(pageNum, 2);
-			pageNum.appendInt(p);
-			const int32_t pageNumWidth = image.getStringWidthInPixels(pageNum.c_str(), kTextSpacingY);
-			image.drawString(pageNum.c_str(), endX - pageNumWidth, pageY, kTextSpacingX, kTextSpacingY);
-			endX -= pageNumWidth + 1;
-			if (p - 1 == pageNumber) {
-				image.invertAreaRounded(endX, pageNumWidth + 1, pageY, pageY + kTextSpacingY);
-			}
+	hid::display::oled_canvas::Canvas& image = hid::display::OLED::main;
+
+	constexpr int32_t pageY = 1 + OLED_MAIN_TOPMOST_PIXEL;
+	int32_t endX = OLED_MAIN_WIDTH_PIXELS;
+
+	// Clear the area
+	int32_t totalWidth = 0;
+	for (int32_t p = static_cast<int32_t>(paging.pages.size()); p > 0; --p) {
+		totalWidth += image.getStringWidthInPixels(std::to_string(p).c_str(), kTextSpacingY);
+	}
+	image.clearAreaExact(endX - totalWidth - 3, pageY, endX, pageY + kTextSpacingY);
+
+	// Draw the counters
+	for (int32_t p = paging.pages.size(); p > 0; p--) {
+		const auto pageNum = std::to_string(p).c_str();
+		const int32_t pageNumWidth = image.getStringWidthInPixels(pageNum, kTextSpacingY);
+		image.drawString(pageNum, endX - pageNumWidth, pageY, kTextSpacingX, kTextSpacingY);
+		endX -= pageNumWidth + 1;
+		if (p - 1 == paging.visiblePageNumber) {
+			image.invertArea(endX, pageNumWidth + 1, pageY, pageY + kTextSpacingY - 1);
 		}
 	}
 }

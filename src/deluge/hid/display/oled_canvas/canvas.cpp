@@ -567,15 +567,30 @@ void Canvas::drawGraphicMultiLine(uint8_t const* graphic, int32_t startX, int32_
 /// Draw a screen title and underline it.
 ///
 /// @param text Title text
-void Canvas::drawScreenTitle(std::string_view title, bool drawSeparator) {
+void Canvas::drawScreenTitle(std::string_view title, bool) {
 	constexpr int32_t extraY = 1;
 	constexpr int32_t startY = extraY + OLED_MAIN_TOPMOST_PIXEL;
 
+	const int32_t titleWidth = getStringWidthInPixels(title.data(), kTextTitleSizeY);
 	drawString(title, 0, startY, kTextTitleSpacingX, kTextTitleSizeY);
-	if (drawSeparator) {
-		drawHorizontalLine(extraY + 11 + OLED_MAIN_TOPMOST_PIXEL, 0, OLED_MAIN_WIDTH_PIXELS - 1);
+	drawCheckerboardPattern(titleWidth + 1, OLED_MAIN_WIDTH_PIXELS - 1, startY, kTextTitleSizeY - 1);
+}
+
+void Canvas::drawCheckerboardPattern(int32_t startX, int32_t endX, int32_t startY, int32_t height, int32_t squareSize) {
+	for (int32_t x = startX; x <= endX; ++x) {
+		for (int32_t y = 0; y < height; ++y) {
+			// Calculate square position
+			int squareX = (x - startX) / squareSize;
+			int squareY = y / squareSize;
+
+			// Alternate fill based on checkerboard rule
+			if ((squareX + squareY) % 2 == 0) {
+				drawPixel(x, startY + y);
+			}
+		}
 	}
 }
+
 
 void Canvas::invertArea(int32_t xMin, int32_t width, int32_t startY, int32_t endY) {
 	int32_t firstRowY = startY >> 3;
