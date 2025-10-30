@@ -23,7 +23,7 @@ class Amount final : public patched_param::Integer {
 public:
 	using Integer::Integer;
 
-	[[nodiscard]] RenderingStyle getRenderingStyle() const override { return BAR; }
+	[[nodiscard]] RenderingStyle getRenderingStyle() const override { return CUBE; }
 
 	void getColumnLabel(StringBuf& label) override { label.append(l10n::get(l10n::String::STRING_FOR_AMOUNT_SHORT)); }
 };

@@ -34,7 +34,8 @@ enum RenderingStyle {
 	HPF,
 	ATTACK,
 	RELEASE,
-	SIDECHAIN_DUCKING
+	SIDECHAIN_DUCKING,
+	CUBE
 };
 
 class Number : public Value<int32_t> {
@@ -62,6 +63,7 @@ protected:
 	void drawAttack(int32_t start_x, int32_t start_y, int32_t slot_width, int32_t slot_height);
 	void drawRelease(int32_t start_x, int32_t start_y, int32_t slot_width, int32_t slot_height);
 	void drawSidechainDucking(int32_t start_x, int32_t start_y, int32_t slot_width, int32_t slot_height);
+	void drawCube(int32_t start_x, int32_t start_y, int32_t slot_width, int32_t slot_height);
 	void getNotificationValue(StringBuf& value) override;
 };
 

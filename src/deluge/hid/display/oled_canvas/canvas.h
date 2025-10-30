@@ -109,6 +109,8 @@ public:
 	/// @param options Draw options
 	void drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, const DrawLineOptions& options = {});
 
+	void invertLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, const DrawLineOptions& options = {});
+
 	/// Draw a 1-px wide rectangle.
 	///
 	/// @param minX Minimum X coordinate, inclusive

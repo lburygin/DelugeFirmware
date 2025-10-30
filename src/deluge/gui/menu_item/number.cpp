@@ -19,6 +19,7 @@
 #include "hid/display/oled.h"
 #include "trigger/out/ppqn.h"
 #include "util/functions.h"
+#include <unordered_set>
 
 namespace deluge::gui::menu_item {
 
@@ -96,6 +97,8 @@ void Number::renderInHorizontalMenu(int32_t start_x, int32_t width, int32_t star
 		return drawRelease(start_x, start_y, width, height);
 	case SIDECHAIN_DUCKING:
 		return drawSidechainDucking(start_x, start_y, width, height);
+	case CUBE:
+		return drawCube(start_x, start_y, width, height);
 	default:
 		DEF_STACK_STRING_BUF(paramValue, 10);
 		paramValue.appendInt(getValue());
@@ -440,6 +443,66 @@ void Number::drawSidechainDucking(int32_t start_x, int32_t start_y, int32_t slot
 	image.drawLine(min_x, y0, max_x - offset_right, y1);
 	image.drawLine(min_x, y0, min_x, y1);
 	image.drawHorizontalLine(y1, max_x - offset_right, max_x);
+}
+
+void Number::drawCube(int32_t start_x, int32_t start_y, int32_t slot_width, int32_t slot_height) {
+	oled_canvas::Canvas& image = OLED::main;
+
+	constexpr uint8_t cube_width = 23;
+	constexpr uint8_t base_height = 10;
+	constexpr uint8_t z_offset = 3;
+
+	const uint8_t cube_start_x = start_x + 4;
+	const uint8_t cube_end_x = cube_start_x + cube_width - 1;
+	const uint8_t center_x = cube_start_x + cube_width / 2;
+	const uint8_t base_start_y = start_y + kHorizontalMenuSlotYOffset;
+	const uint8_t base_end_y = base_start_y + base_height - 1;
+
+	// Draw the frame
+	image.drawVerticalLine(cube_start_x, base_start_y, base_end_y);
+	image.drawVerticalLine(cube_end_x, base_start_y, base_end_y);
+	image.drawVerticalLine(center_x, base_start_y + z_offset, base_end_y + z_offset);
+
+	// Top of the frame
+	image.drawLine(cube_start_x, base_start_y, center_x, base_start_y - z_offset);
+	image.drawLine(center_x, base_start_y - z_offset, cube_end_x, base_start_y);
+	image.drawLine(cube_start_x, base_start_y, center_x, base_start_y + z_offset);
+	image.drawLine(center_x, base_start_y + z_offset, cube_end_x, base_start_y);
+
+	// Bottom of the frame
+	image.drawLine(cube_start_x, base_end_y, center_x, base_end_y + z_offset);
+	image.drawLine(center_x, base_end_y + z_offset, cube_end_x, base_end_y);
+
+	const float norm = getNormalizedValue();
+	const uint8_t fill_height = norm * base_height;
+	const uint8_t fill_y = base_end_y - fill_height + 1;
+
+	if (fill_height > 0) {
+		constexpr uint8_t fill_offset = 2;
+		const uint8_t min_x = cube_start_x + fill_offset;
+		const uint8_t max_x = cube_end_x - fill_offset;
+
+		auto fill_bottom_area = [&](oled_canvas::Point point) {
+			image.invertLine(point.x, point.y, point.x, base_end_y);
+		};
+		auto fill_top_area = [&](oled_canvas::Point point) {
+			image.invertLine(point.x, point.y, point.x, base_end_y - 1);
+		};
+
+		image.invertLine(cube_start_x, base_end_y, center_x, base_end_y + z_offset,
+		                 {.min_x = min_x, .max_x = center_x - 1, .point_callback = fill_bottom_area});
+		image.invertLine(center_x, base_end_y + z_offset, cube_end_x, base_end_y,
+		                 {.min_x = center_x + 1, .max_x = max_x, .point_callback = fill_bottom_area});
+
+		image.invertLine(cube_start_x, fill_y, center_x, fill_y - z_offset,
+		                 {.min_x = min_x, .max_x = center_x - 1, .point_callback = fill_top_area});
+		image.invertLine(center_x, fill_y - z_offset, cube_end_x, fill_y,
+		                 {.min_x = center_x + 1, .max_x = max_x, .point_callback = fill_top_area});
+
+		image.invertLine(center_x, fill_y - z_offset, center_x, base_end_y + z_offset);
+		image.clearAreaExact(cube_start_x + 1, base_end_y - z_offset, cube_start_x + 1, base_end_y + z_offset);
+		image.clearAreaExact(cube_end_x - 1, base_end_y - z_offset, cube_end_x - 1, base_end_y + z_offset);
+	}
 }
 
 void Number::getNotificationValue(StringBuf& value) {
