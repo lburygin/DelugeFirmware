@@ -33,6 +33,7 @@ public:
 	void beginSession(MenuItem* navigatedBackwardFrom) override;
 	void endSession() override;
 	bool hasItem(const MenuItem* item) override;
+	bool hasItem(const std::function<bool(MenuItem*)>& predicate) override;
 	void setCurrentItem(const MenuItem* item) override;
 
 protected:

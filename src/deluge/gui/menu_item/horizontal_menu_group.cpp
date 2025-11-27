@@ -205,6 +205,10 @@ bool HorizontalMenuGroup::hasItem(const MenuItem* item) {
 	return std::ranges::any_of(menus_, [&](auto menu) { return menu->hasItem(item); });
 }
 
+bool HorizontalMenuGroup::hasItem(const std::function<bool(MenuItem*)>& predicate) {
+	return std::ranges::any_of(menus_, [&](auto menu) { return menu->hasItem(predicate); });
+}
+
 void HorizontalMenuGroup::setCurrentItem(const MenuItem* item) {
 	for (auto* menu : menus_) {
 		current_item_ = std::ranges::find(menu->items, item);

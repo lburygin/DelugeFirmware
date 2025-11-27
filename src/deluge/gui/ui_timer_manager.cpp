@@ -98,6 +98,13 @@ void UITimerManager::routine() {
 					}
 
 					break;
+				case TimerName::HORIZONTAL_MENUS: {
+					if (display->haveOLED()) {
+						if (getCurrentUI() != nullptr) {
+							getCurrentUI()->renderOLED(hid::display::OLED::main);
+						}
+					}
+				}
 
 				case TimerName::LOADING_ANIMATION:
 					if (display->haveOLED()) {

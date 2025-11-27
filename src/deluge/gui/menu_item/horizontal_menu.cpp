@@ -641,6 +641,11 @@ bool HorizontalMenu::hasItem(const MenuItem* item) {
 	return std::ranges::contains(items, item);
 }
 
+bool HorizontalMenu::hasItem(const std::function<bool(MenuItem*)>& predicate) {
+	auto it = std::ranges::find_if(items, predicate);
+	return it != items.end();
+}
+
 void HorizontalMenu::setCurrentItem(const MenuItem* item) {
 	current_item_ = std::ranges::find(items, item);
 	lastSelectedItemPosition = kNoSelection;

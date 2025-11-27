@@ -56,8 +56,9 @@ public:
 	void endSession() override;
 
 	virtual bool hasItem(const MenuItem* item);
+	virtual bool hasItem(const std::function<bool(MenuItem*)>& predicate);
 	virtual void setCurrentItem(const MenuItem* item);
-	decltype(items)& getItems() { return items; }
+	virtual decltype(items)& getItems() { return items; }
 	MenuItem* getCurrentItem() const { return *current_item_; }
 
 protected:

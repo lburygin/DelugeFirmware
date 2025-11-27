@@ -87,6 +87,8 @@
 #include "storage/flash_storage.h"
 #include "storage/storage_manager.h"
 
+#include <gui/menu_item/horizontal_menu.h>
+
 namespace params = deluge::modulation::params;
 namespace encoders = deluge::hid::encoders;
 using namespace deluge;
@@ -1079,6 +1081,7 @@ void View::displayModEncoderValuePopup(params::Kind kind, int32_t paramID, int32
 	static int32_t last_display_value = INT32_MIN;
 	static PatchSource last_source1 = PatchSource::NONE;
 	static PatchSource last_source2 = PatchSource::NONE;
+	static menu_item::HorizontalMenu* last_menu = nullptr;
 
 	// Display arbitration for multiple mod encoders ("juggling ball" system)
 	static params::Kind display_owner_kind = params::Kind::NONE;
@@ -1231,9 +1234,39 @@ void View::displayModEncoderValuePopup(params::Kind kind, int32_t paramID, int32
 			// else: it's still the current owner's turn to juggle the ball, so keep it
 		}
 
+		// Update horizontal menu to preview
+		if (kind != last_param_kind || paramID != last_param_id) {
+			auto chain = soundEditor.getCurrentHorizontalMenusChain();
+			last_menu = [&] -> menu_item::HorizontalMenu* {
+				if (!chain.has_value()) {
+					return nullptr;
+				}
+				auto it = std::ranges::find_if(chain.value(), [&](menu_item::HorizontalMenu* menu) {
+					return menu->hasItem([&](MenuItem* it) {
+						if (it->getParamIndex() == paramID && it->getParamKind() == kind) {
+							menu->focusChild(it);
+							return true;
+						}
+						return false;
+					});
+				});
+				if (it == chain.value().end()) {
+					return nullptr;
+				}
+				return *it;
+			}();
+		}
+
 		// Only update notification if parameter info has changed AND we can take display ownership AND enough time has
 		// elapsed
 		if (has_param_info_changed && can_take_display_ownership && has_min_time_elapsed) {
+			// Preview the horizontal menu if a matched menu found
+			if (last_menu != nullptr) {
+				hid::display::OLED::main.clear();
+				last_menu->renderOLED();
+				uiTimerManager.setTimer(TimerName::HORIZONTAL_MENUS, 1700);
+			}
+
 			display->displayNotification(parameter_name.c_str(), parameter_value.c_str());
 
 			// Update cached values
